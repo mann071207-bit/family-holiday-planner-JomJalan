@@ -1,0 +1,5 @@
+[
+  { "id": 1, "name": "Family Budget",   "pricePerAdult": 200, "includes": "Hostel/homestay, local transport" },
+  { "id": 2, "name": "Family Standard", "pricePerAdult": 350, "includes": "3-star hotel, breakfast, one attraction pass" },
+  { "id": 3, "name": "Family Premium",  "pricePerAdult": 600, "includes": "4-star hotel, meals, private transport" }
+]
