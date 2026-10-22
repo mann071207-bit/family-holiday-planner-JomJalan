@@ -6,6 +6,7 @@ const searchBtn = document.getElementById("searchBtn");
 const message = document.getElementById("message");
 const cityInfo = document.getElementById("cityInfo");
 const weatherInfo = document.getElementById("weatherInfo");
+const wikiInfo = document.getElementById("wikiInfo");
 
 // Will be used later by the suggestion logic
 let currentWeather = null;
@@ -69,11 +70,37 @@ async function getWeather(lat, lon) {
   };
 }
 
+// ---------- Wikipedia: fetch a summary and photo for the city ----------
+// Returns an object, or null if Wikipedia has no page for this name
+async function getWikiSummary(cityName) {
+  const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cityName)}`;
+
+  const response = await fetch(url);
+
+  if (response.status === 404) {
+    return null;                          // no page found (empty result)
+  }
+  if (!response.ok) {
+    throw new Error("Wikipedia server error");
+  }
+
+  const data = await response.json();
+  console.log(data);
+
+  return {
+    title: data.title,
+    description: data.description || "",
+    extract: data.extract,
+    image: data.thumbnail ? data.thumbnail.source : null   // photo may be missing
+  };
+}
+
 // ---------- 6. When the Search button is clicked ----------
 searchBtn.addEventListener("click", async () => {
   const name = cityInput.value.trim();    // trim() removes extra spaces
   cityInfo.innerHTML = "";                // clear the old city result
   weatherInfo.innerHTML = "";             // clear the old weather result
+  wikiInfo.innerHTML = "";                // clear the old Wikipedia result
 
   // Input validation
   if (name === "") {
@@ -90,9 +117,9 @@ searchBtn.addEventListener("click", async () => {
     if (city === null) {
       showMessage("City not found. Please check the spelling.");
       return;
-}
+    }
 
-    // Success: display the data on the page (DOM manipulation)
+    // Success: display the city (DOM manipulation)
     showMessage("");
     cityInfo.innerHTML = `
       <h2>${city.name}, ${city.country}</h2>
@@ -115,6 +142,30 @@ searchBtn.addEventListener("click", async () => {
       console.error("Weather error:", weatherError);
       currentWeather = null;
       weatherInfo.innerHTML = "<p>Weather data is not available right now.</p>";
+    }
+
+    // Wikipedia: also in its own try/catch (still INSIDE the main try)
+    try {
+      const wiki = await getWikiSummary(city.name);
+
+      if (wiki === null) {
+        wikiInfo.innerHTML = "<p>No Wikipedia information found for this city.</p>";
+      } else {
+        // Only show the image if one exists
+        const imageHtml = wiki.image
+          ? `<img src="${wiki.image}" alt="Photo of ${wiki.title}" width="300">`
+          : "";
+
+        wikiInfo.innerHTML = `
+          <h3>About ${wiki.title}</h3>
+          ${imageHtml}
+          <p><em>${wiki.description}</em></p>
+          <p>${wiki.extract}</p>
+        `;
+      }
+    } catch (wikiError) {
+      console.error("Wikipedia error:", wikiError);
+      wikiInfo.innerHTML = "<p>Wikipedia information is not available right now.</p>";
     }
 
   } catch (error) {
