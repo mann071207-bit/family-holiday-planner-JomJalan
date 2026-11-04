@@ -2,7 +2,11 @@ const { contextBridge } = require("electron");
 const fs = require("fs");
 const path = require("path");
 
+function readJson(file) {
+  return JSON.parse(fs.readFileSync(path.join(__dirname, "data", file), "utf8"));
+}
+
 contextBridge.exposeInMainWorld("appData", {
-  getPackages: () =>
-    JSON.parse(fs.readFileSync(path.join(__dirname, "data", "packages.json"), "utf8"))
+  getPackages: () => readJson("packages.json"),
+  getDestinations: () => readJson("destinations.json")
 });

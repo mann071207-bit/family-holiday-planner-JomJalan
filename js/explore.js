@@ -1,41 +1,58 @@
-// Explore page: search a city using the Open-Meteo Geocoding API
-
-// 1. Get the HTML elements by their id
+// ---------- 1. HTML elements ----------
 const cityInput = document.getElementById("cityInput");
 const searchBtn = document.getElementById("searchBtn");
 const message = document.getElementById("message");
 const cityInfo = document.getElementById("cityInfo");
+const timeInfo = document.getElementById("timeInfo");
 const weatherInfo = document.getElementById("weatherInfo");
-const wikiInfo = document.getElementById("wikiInfo");
+const guideInfo = document.getElementById("guideInfo");
 
-// Will be used later by the suggestion logic
+// Saved here so the suggestion logic can use them later
+let currentCity = null;
 let currentWeather = null;
+let currentTime = null;
 
-// 2. Show a message to the user (red for errors, green for success)
+// ---------- 2. Messages ----------
 function showMessage(text, isError = true) {
   message.textContent = text;
   message.style.color = isError ? "red" : "green";
 }
 
-// 3. Ask the API for the city. Returns the city object, or null if not found
+// ---------- 3. Geocoding API: find the city ----------
 async function searchCity(name) {
   const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1`;
-
   const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error("Server error");      // goes to the catch block below
-  }
+  if (!response.ok) throw new Error("Geocoding server error");
 
   const data = await response.json();
-  console.log(data);                      // look at this in DevTools (Ctrl+Shift+I)
-
-  if (!data.results) {
-    return null;                          // API found nothing
-  }
+  if (!data.results) return null;     
   return data.results[0];
 }
 
-// ---------- 4. Turn Open-Meteo's weather code into readable text ----------
+// ---------- 4. Local time at the destination ----------
+// Uses the timezone from the Geocoding API (e.g. "Asia/Tokyo")
+function getLocalTime(timezone) {
+  const now = new Date();
+
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(now);
+
+  const date = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezone,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  }).format(now);
+
+return { time: time, date: date, timezone: timezone };
+}
+
+// ---------- 5. Weather API ----------
 function getWeatherText(code) {
   if (code === 0) return "Clear sky";
   if (code >= 1 && code <= 3) return "Partly cloudy";
@@ -49,18 +66,12 @@ function getWeatherText(code) {
   return "Unknown";
 }
 
-// ---------- 5. Weather: fetch current weather for a latitude and longitude ----------
 async function getWeather(lat, lon) {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m&timezone=auto`;
-
   const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error("Weather server error");
-  }
+  if (!response.ok) throw new Error("Weather server error");
 
   const data = await response.json();
-  console.log(data);
-
   return {
     temperature: data.current.temperature_2m,
     code: data.current.weather_code,
@@ -70,37 +81,27 @@ async function getWeather(lat, lon) {
   };
 }
 
-// ---------- Wikipedia: fetch a summary and photo for the city ----------
-// Returns an object, or null if Wikipedia has no page for this name
-async function getWikiSummary(cityName) {
-  const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cityName)}`;
-
-  const response = await fetch(url);
-
-  if (response.status === 404) {
-    return null;                          // no page found (empty result)
-  }
-  if (!response.ok) {
-    throw new Error("Wikipedia server error");
-  }
-
-  const data = await response.json();
-  console.log(data);
-
-  return {
-    title: data.title,
-    description: data.description || "",
-    extract: data.extract,
-    image: data.thumbnail ? data.thumbnail.source : null   // photo may be missing
-  };
+// ---------- 6. (local JSON file) ----------
+function getDestinationGuide(cityName) {
+  const destinations = window.appData.getDestinations();
+  const found = destinations.find(
+    d => d.city.toLowerCase() === cityName.toLowerCase()
+  );
+  return found || null;
 }
 
-// ---------- 6. When the Search button is clicked ----------
+// ---------- 7. Search button ----------
 searchBtn.addEventListener("click", async () => {
-  const name = cityInput.value.trim();    // trim() removes extra spaces
-  cityInfo.innerHTML = "";                // clear the old city result
-  weatherInfo.innerHTML = "";             // clear the old weather result
-  wikiInfo.innerHTML = "";                // clear the old Wikipedia result
+  const name = cityInput.value.trim();
+
+  // Clear old results
+  cityInfo.innerHTML = "";
+  timeInfo.innerHTML = "";
+  weatherInfo.innerHTML = "";
+  guideInfo.innerHTML = "";
+  currentCity = null;
+  currentWeather = null;
+  currentTime = null;
 
   // Input validation
   if (name === "") {
@@ -119,7 +120,7 @@ searchBtn.addEventListener("click", async () => {
       return;
     }
 
-    // Success: display the city (DOM manipulation)
+    currentCity = city;
     showMessage("");
     cityInfo.innerHTML = `
       <h2>${city.name}, ${city.country}</h2>
@@ -129,7 +130,20 @@ searchBtn.addEventListener("click", async () => {
       <p>Timezone: ${city.timezone}</p>
     `;
 
-    // Weather: in its own try/catch so a weather failure doesn't hide the city
+    // World Time: own try/catch
+    try {
+      currentTime = getLocalTime(city.timezone);
+            timeInfo.innerHTML = `
+        <h2>Local Time</h2>
+        <p>${currentTime.time} (${currentTime.timezone})</p>
+        <p>${currentTime.day}, ${currentTime.date}</p>
+      `;
+    } catch (timeError) {
+      console.error("Time error:", timeError);
+      timeInfo.innerHTML = "<p>Local time is not available right now.</p>";
+    }
+
+    // Weather: own try/catch
     try {
       currentWeather = await getWeather(city.latitude, city.longitude);
       weatherInfo.innerHTML = `
@@ -140,36 +154,29 @@ searchBtn.addEventListener("click", async () => {
       `;
     } catch (weatherError) {
       console.error("Weather error:", weatherError);
-      currentWeather = null;
       weatherInfo.innerHTML = "<p>Weather data is not available right now.</p>";
     }
 
-    // Wikipedia: also in its own try/catch (still INSIDE the main try)
+    // Guide from our local file: own try/catch
     try {
-      const wiki = await getWikiSummary(city.name);
-
-      if (wiki === null) {
-        wikiInfo.innerHTML = "<p>No Wikipedia information found for this city.</p>";
+      const guide = getDestinationGuide(city.name);
+      if (guide === null) {
+        guideInfo.innerHTML = "<p>No travel guide is available for this city yet.</p>";
       } else {
-        // Only show the image if one exists
-        const imageHtml = wiki.image
-          ? `<img src="${wiki.image}" alt="Photo of ${wiki.title}" width="300">`
-          : "";
-
-        wikiInfo.innerHTML = `
-          <h3>About ${wiki.title}</h3>
-          ${imageHtml}
-          <p><em>${wiki.description}</em></p>
-          <p>${wiki.extract}</p>
+        guideInfo.innerHTML = `
+          <h3>Travel Guide: ${guide.city}</h3>
+          <img src="${guide.image}" alt="Photo of ${guide.city}" width="300">
+          <p>${guide.description}</p>
+          <p><strong>Family tips:</strong> ${guide.familyTips}</p>
+          <p><strong>Best season:</strong> ${guide.bestSeason}</p>
         `;
       }
-    } catch (wikiError) {
-      console.error("Wikipedia error:", wikiError);
-      wikiInfo.innerHTML = "<p>Wikipedia information is not available right now.</p>";
+    } catch (guideError) {
+      console.error("Guide error:", guideError);
+      guideInfo.innerHTML = "<p>Travel guide could not be loaded.</p>";
     }
 
   } catch (error) {
-    // Failed request (no internet, server down)
     console.error("City search error:", error);
     showMessage("Could not load data. Please check your internet connection.");
   }

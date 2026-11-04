@@ -1,0 +1,18 @@
+[
+  {
+    "city": "Tokyo",
+    "type": "city",
+    "description": "A busy modern capital that mixes technology, food and tradition.",
+    "familyTips": "Ueno Zoo, teamLab and Tokyo Disneyland suit kids. Trains are stroller-friendly.",
+    "bestSeason": "March to May, October to November",
+    "image": "images/tokyo.jpg"
+  },
+  {
+    "city": "Singapore",
+    "type": "city",
+    "description": "A clean, safe city-state with many family attractions.",
+    "familyTips": "Singapore Zoo, Gardens by the Bay and Sentosa are all easy with children.",
+    "bestSeason": "February to April",
+    "image": "images/singapore.jpg"
+  }
+]
