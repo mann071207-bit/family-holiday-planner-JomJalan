@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>My Plans</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -10,7 +11,24 @@
     <a href="index.html">Explore</a>
     <a href="plans.html">My Plans</a>
   </nav>
+
   <h1>My Plans</h1>
+  <p id="plansMessage"></p>
+
+  <section id="plansList"></section>
+
+  <section id="editSection" hidden>
+    <h3>Edit Plan</h3>
+    <label for="editNotes">Notes:</label>
+    <input type="text" id="editNotes">
+
+    <label for="editDays">Days:</label>
+    <input type="number" id="editDays" min="1">
+
+    <button id="updateBtn">Update</button>
+    <button id="cancelBtn">Cancel</button>
+  </section>
+
   <script src="js/plans.js"></script>
 </body>
 </html>

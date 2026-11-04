@@ -1,0 +1,85 @@
+
+:root {
+  --main: #7e57c2;        /* nav bar and buttons */
+  --main-dark: #5e35b1;   /* headings and hover */
+  --bg: #f5f0fb;          /* page background (light lavender) */
+  --card: #ffffff;
+  --text: #222222;
+  --error: #c62828;
+  --ok: #2e7d32;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg);
+  margin: 0;
+  padding: 0 0 40px;
+  line-height: 1.5;
+}
+
+/* Navigation bar */
+nav {
+  background: var(--main);
+  padding: 14px 24px;
+  display: flex;
+  gap: 24px;
+}
+nav a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+}
+nav a:hover { text-decoration: underline; }
+
+h1 { margin: 24px; color: var(--main-dark); }
+
+/* Every section becomes a card */
+section {
+  background: var(--card);
+  margin: 16px 24px;
+  padding: 16px 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+section:empty { display: none; }   /* hide empty result boxes */
+section[hidden] { display: none; }
+
+h2, h3 { margin-top: 0; color: var(--main-dark); }
+
+/* Forms */
+label {
+  display: inline-block;
+  margin: 8px 6px 4px 0;
+  font-weight: bold;
+}
+input, select {
+  padding: 8px 10px;
+  margin: 4px 14px 8px 0;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  font-size: 15px;
+}
+input[type="number"] { width: 80px; }
+input[type="text"] { width: 240px; }
+
+button {
+  background: var(--main);
+  color: white;
+  border: none;
+  padding: 9px 16px;
+  margin: 6px 6px 6px 0;
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+}
+button:hover { background: var(--main-dark); }
+
+img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
+
+hr { border: none; border-top: 1px solid #ddd; }
+
+section p { margin: 6px 0; }
