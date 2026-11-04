@@ -14,5 +14,29 @@
     "familyTips": "Singapore Zoo, Gardens by the Bay and Sentosa are all easy with children.",
     "bestSeason": "February to April",
     "image": "images/singapore.jpg"
+  },
+  {
+    "city": "Bangkok",
+    "type": "city",
+    "description": "A lively capital known for street food, temples and big shopping malls.",
+    "familyTips": "Safari World, SEA LIFE aquarium and air-conditioned malls are good for kids, especially in the heat.",
+    "bestSeason": "November to February",
+    "image": "images/bangkok.jpg"
+  },
+  {
+    "city": "Bali",
+    "type": "beach",
+    "description": "A tropical island with beaches, rice terraces and friendly local culture.",
+    "familyTips": "Choose calm beaches such as Sanur for young children. Bali Safari and Water Park is a family favourite.",
+    "bestSeason": "April to October",
+    "image": "images/bali.jpg"
+  },
+  {
+    "city": "Langkawi",
+    "type": "nature",
+    "description": "A Malaysian island with beaches, mangroves, waterfalls and cable car views.",
+    "familyTips": "Try the Kilim mangrove tour, the Sky Cab and Underwater World. Easy to reach from Malaysia.",
+    "bestSeason": "December to March",
+    "image": "images/langkawi.jpg"
   }
 ]
