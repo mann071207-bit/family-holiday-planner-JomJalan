@@ -11,6 +11,7 @@ const guideInfo = document.getElementById("guideInfo");
 let currentCity = null;
 let currentWeather = null;
 let currentTime = null;
+let currentCalc = null;   
 
 // ---------- 2. Messages ----------
 function showMessage(text, isError = true) {
@@ -232,12 +233,22 @@ calcBtn.addEventListener("click", () => {
 
   const result = calculateFamilyCost(pkg, adults, children, infants, days);
 
-  if (result.error) {
+    if (result.error) {
     calcMessage.textContent = result.error;
     calcMessage.style.color = "red";
     costResult.innerHTML = "";
     return;
   }
+
+  // Remember these values so "Save Plan" can store them
+  currentCalc = {
+    total: result.total,
+    packageName: pkg.name,
+    days: days,
+    adults: adults,
+    children: children,
+    infants: infants
+  };
 
   calcMessage.textContent = "Cost calculated.";
   calcMessage.style.color = "green";
@@ -246,4 +257,125 @@ calcBtn.addEventListener("click", () => {
     <p><strong>Per person:</strong> RM ${result.perPerson.toFixed(2)}</p>
     <p><strong>Per day:</strong> RM ${result.perDay.toFixed(2)}</p>
   `;
+});
+
+// ---------- 9. Suggestion logic ----------
+const seniorsInput = document.getElementById("seniors");
+const suggestBtn = document.getElementById("suggestBtn");
+const suggestionResult = document.getElementById("suggestionResult");
+
+// Saved so the plan can store it in Local Storage later
+let currentSuggestion = "";
+
+// Decide an activity from the weather, the destination type and the family makeup
+function suggestActivity(weather, guideType, children, infants, seniors) {
+  const code = weather.code;
+  const temp = weather.temperature;
+  const wind = weather.wind;
+
+  const isRainy = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
+  const isSnowy = (code >= 71 && code <= 77) || code === 85 || code === 86;
+  const hasVulnerable = infants > 0 || seniors > 0;
+
+  if (code >= 95) {
+    return "Thunderstorm expected. Stay indoors: visit a mall, museum or hotel pool.";
+  } else if (isRainy && children > 0) {
+    return "Rainy day: try an aquarium, kids' museum or indoor playground.";
+  } else if (isRainy) {
+    return "Rainy day: visit a museum, cafe or shopping centre.";
+  } else if (isSnowy) {
+    return "Snowy weather: enjoy a snow play area, or stay warm with an indoor food tour.";
+  } else if (temp >= 30 && hasVulnerable) {
+    return "Very hot: choose shaded parks, and go out only early morning or evening.";
+  } else if (temp < 15 && hasVulnerable) {
+    return "Cold weather: stick to indoor attractions and warm cafes.";
+  } else if (wind > 40) {
+    return "Strong wind: skip boat rides and high viewpoints. Try indoor attractions.";
+  } else if (temp >= 15 && temp < 30) {
+    switch (guideType) {
+      case "themepark":
+        return "Perfect weather for a theme park day with the whole family.";
+      case "beach":
+        return "Great beach day: swimming and sandcastles.";
+      case "nature":
+        return "Nice weather for a zoo visit or a family picnic.";
+      case "city":
+        return "Good for a walking tour with stroller-friendly stops.";
+      default:
+        return "Enjoy the mild weather with a relaxed day out.";
+    }
+  }
+
+  return "No suitable suggestion available. Try another city or change your family details.";
+}
+
+suggestBtn.addEventListener("click", () => {
+  if (currentWeather === null || currentCity === null) {
+    suggestionResult.innerHTML = "<p style='color:red'>Search for a city first.</p>";
+    return;
+  }
+
+  const children = Number(childrenInput.value);
+  const infants = Number(infantsInput.value);
+  const seniors = Number(seniorsInput.value);
+
+  if ([children, infants, seniors].some(n => Number.isNaN(n) || n < 0)) {
+    suggestionResult.innerHTML = "<p style='color:red'>Family numbers must be 0 or more.</p>";
+    return;
+  }
+
+  const guide = getDestinationGuide(currentCity.name);
+  const guideType = guide ? guide.type : "city";
+
+  currentSuggestion = suggestActivity(currentWeather, guideType, children, infants, seniors);
+  suggestionResult.innerHTML = `<h3>Suggested Activity</h3><p>${currentSuggestion}</p>`;
+});
+
+// ---------- 10. Save plan (CREATE) to Local Storage ----------
+const notesInput = document.getElementById("notes");
+const saveBtn = document.getElementById("saveBtn");
+const saveMessage = document.getElementById("saveMessage");
+
+saveBtn.addEventListener("click", () => {
+  // Validation: make sure every step has been done
+  if (currentCity === null) {
+    saveMessage.textContent = "Search for a city first.";
+    saveMessage.style.color = "red";
+    return;
+  }
+  if (currentCalc === null) {
+    saveMessage.textContent = "Calculate the cost first.";
+    saveMessage.style.color = "red";
+    return;
+  }
+  if (currentSuggestion === "") {
+    saveMessage.textContent = "Get an activity suggestion first.";
+    saveMessage.style.color = "red";
+    return;
+  }
+
+  // Build the plan object
+  const plan = {
+    id: Date.now(),                       // unique id
+    city: currentCity.name,
+    country: currentCity.country,
+    days: currentCalc.days,
+    adults: currentCalc.adults,
+    children: currentCalc.children,
+    infants: currentCalc.infants,
+    seniors: Number(seniorsInput.value),
+    package: currentCalc.packageName,
+    totalCost: currentCalc.total,
+    suggestion: currentSuggestion,        // suggestion stored too (Task 5 requirement)
+    notes: notesInput.value.trim()
+  };
+
+  // Read the old list, add the new plan, save the list back
+  const plans = JSON.parse(localStorage.getItem("plans")) || [];
+  plans.push(plan);
+  localStorage.setItem("plans", JSON.stringify(plans));
+
+  saveMessage.textContent = "Plan saved!";
+  saveMessage.style.color = "green";
+  notesInput.value = "";
 });
