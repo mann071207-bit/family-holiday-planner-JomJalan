@@ -13,7 +13,7 @@
   <h1>JomJalan</h1>
   <section>
   <label for="cityInput">Enter a city:</label>
-  <input type="text" id="cityInput" placeholder="e.g. Tokyo">
+  <input type="text" id="cityInput" placeholder="e.g. Tokyo">>
   <button id="searchBtn">Search</button>
   <p id="message"></p>
 </section>
@@ -22,6 +22,28 @@
 <section id="timeInfo"></section>
 <section id="weatherInfo"></section>
 <section id="guideInfo"></section>
+<section id="plannerSection">
+  <h3>Plan Your Family Trip</h3>
+
+  <label for="adults">Adults:</label>
+  <input type="number" id="adults" min="1" value="2">
+
+  <label for="children">Children (2-11):</label>
+  <input type="number" id="children" min="0" value="0">
+
+  <label for="infants">Infants (under 2):</label>
+  <input type="number" id="infants" min="0" value="0">
+
+  <label for="days">Number of days:</label>
+  <input type="number" id="days" min="1" value="5">
+
+  <label for="packageSelect">Package:</label>
+  <select id="packageSelect"></select>
+
+  <button id="calcBtn">Calculate Cost</button>
+  <p id="calcMessage"></p>
+  <div id="costResult"></div>
+</section>
   <script src="js/explore.js"></script>
 </body>
 </html>

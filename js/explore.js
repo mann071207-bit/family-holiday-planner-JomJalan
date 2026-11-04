@@ -133,10 +133,10 @@ searchBtn.addEventListener("click", async () => {
     // World Time: own try/catch
     try {
       currentTime = getLocalTime(city.timezone);
-            timeInfo.innerHTML = `
-        <h2>Local Time</h2>
+      timeInfo.innerHTML = `
+        <h3>Local Time</h3>
         <p>${currentTime.time} (${currentTime.timezone})</p>
-        <p>${currentTime.day}, ${currentTime.date}</p>
+        <p>${currentTime.date}</p>
       `;
     } catch (timeError) {
       console.error("Time error:", timeError);
@@ -180,4 +180,70 @@ searchBtn.addEventListener("click", async () => {
     console.error("City search error:", error);
     showMessage("Could not load data. Please check your internet connection.");
   }
+});
+
+// ---------- 8. Family cost calculator ----------
+const adultsInput = document.getElementById("adults");
+const childrenInput = document.getElementById("children");
+const infantsInput = document.getElementById("infants");
+const daysInput = document.getElementById("days");
+const packageSelect = document.getElementById("packageSelect");
+const calcBtn = document.getElementById("calcBtn");
+const calcMessage = document.getElementById("calcMessage");
+const costResult = document.getElementById("costResult");
+
+// Fill the package dropdown from data/packages.json (DOM manipulation)
+function loadPackages() {
+  const packages = window.appData.getPackages();
+  packages.forEach(pkg => {
+    const option = document.createElement("option");
+    option.value = pkg.id;
+    option.textContent = `${pkg.name} (RM ${pkg.pricePerAdult} per adult per day)`;
+    packageSelect.appendChild(option);
+  });
+}
+loadPackages();
+
+// Calculation: adults pay full price, children 50%, infants free
+// Returns { error } for invalid input, otherwise the cost results
+function calculateFamilyCost(pkg, adults, children, infants, days) {
+  if ([adults, children, infants, days].some(n => Number.isNaN(n) || !Number.isInteger(n))) {
+    return { error: "Please enter whole numbers only." };
+  }
+  if (adults < 1) return { error: "At least 1 adult is required." };
+  if (children < 0 || infants < 0) return { error: "Numbers cannot be negative." };
+  if (days < 1) return { error: "Trip must be at least 1 day." };
+
+  const dailyCost = adults * pkg.pricePerAdult + children * pkg.pricePerAdult * 0.5;
+  const total = dailyCost * days;
+  const people = adults + children + infants;
+
+  return { total: total, perPerson: total / people, perDay: dailyCost };
+}
+
+calcBtn.addEventListener("click", () => {
+  const adults = Number(adultsInput.value);
+  const children = Number(childrenInput.value);
+  const infants = Number(infantsInput.value);
+  const days = Number(daysInput.value);
+
+  const packages = window.appData.getPackages();
+  const pkg = packages.find(p => p.id === Number(packageSelect.value));
+
+  const result = calculateFamilyCost(pkg, adults, children, infants, days);
+
+  if (result.error) {
+    calcMessage.textContent = result.error;
+    calcMessage.style.color = "red";
+    costResult.innerHTML = "";
+    return;
+  }
+
+  calcMessage.textContent = "Cost calculated.";
+  calcMessage.style.color = "green";
+  costResult.innerHTML = `
+    <p><strong>Total:</strong> RM ${result.total.toFixed(2)}</p>
+    <p><strong>Per person:</strong> RM ${result.perPerson.toFixed(2)}</p>
+    <p><strong>Per day:</strong> RM ${result.perDay.toFixed(2)}</p>
+  `;
 });
