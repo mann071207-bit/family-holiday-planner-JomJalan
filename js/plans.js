@@ -1,3 +1,4 @@
+// js/plans.js
 // My Plans page: READ, UPDATE and DELETE plans stored in Local Storage
 
 const plansList = document.getElementById("plansList");
@@ -35,6 +36,7 @@ function renderPlans() {
 
   plans.forEach(plan => {
     const card = document.createElement("div");
+    card.className = "plan-card";                 // <-- new: picks up the card style
     card.innerHTML = `
       <h3>${plan.city}, ${plan.country}</h3>
       <p>Package: ${plan.package} | ${plan.days} days</p>
@@ -44,8 +46,7 @@ function renderPlans() {
       <p>Notes: ${plan.notes || "-"}</p>
       <button data-action="edit" data-id="${plan.id}">Edit</button>
       <button data-action="delete" data-id="${plan.id}">Delete</button>
-      <hr>
-    `;
+    `;                                            // <hr> removed
     plansList.appendChild(card);
   });
 }

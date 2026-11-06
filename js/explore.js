@@ -1,3 +1,6 @@
+// js/explore.js
+// Explore page: Geocoding API + Weather API + Nager.Date API + our own JSON files
+
 // ---------- 1. HTML elements ----------
 const cityInput = document.getElementById("cityInput");
 const searchBtn = document.getElementById("searchBtn");
@@ -6,12 +9,15 @@ const cityInfo = document.getElementById("cityInfo");
 const timeInfo = document.getElementById("timeInfo");
 const weatherInfo = document.getElementById("weatherInfo");
 const guideInfo = document.getElementById("guideInfo");
+const countryInfo = document.getElementById("countryInfo");
+const forecastInfo = document.getElementById("forecastInfo");
 
-// Saved here so the suggestion logic can use them later
+// Saved here so the suggestion logic and Save Plan can use them later
 let currentCity = null;
 let currentWeather = null;
 let currentTime = null;
-let currentCalc = null;   
+let currentCalc = null;
+let currentSuggestion = "";
 
 // ---------- 2. Messages ----------
 function showMessage(text, isError = true) {
@@ -20,13 +26,14 @@ function showMessage(text, isError = true) {
 }
 
 // ---------- 3. Geocoding API: find the city ----------
+// Returns the city object, or null if not found
 async function searchCity(name) {
   const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1`;
   const response = await fetch(url);
   if (!response.ok) throw new Error("Geocoding server error");
 
   const data = await response.json();
-  if (!data.results) return null;     
+  if (!data.results) return null;          // nothing found
   return data.results[0];
 }
 
@@ -50,10 +57,11 @@ function getLocalTime(timezone) {
     year: "numeric"
   }).format(now);
 
-return { time: time, date: date, timezone: timezone };
+  return { time: time, date: date, timezone: timezone };
 }
 
 // ---------- 5. Weather API ----------
+// Turn Open-Meteo's weather code into readable text
 function getWeatherText(code) {
   if (code === 0) return "Clear sky";
   if (code >= 1 && code <= 3) return "Partly cloudy";
@@ -82,7 +90,7 @@ async function getWeather(lat, lon) {
   };
 }
 
-// ---------- 6. (local JSON file) ----------
+// ---------- 6. Our own guide data (local JSON file) ----------
 function getDestinationGuide(cityName) {
   const destinations = window.appData.getDestinations();
   const found = destinations.find(
@@ -91,7 +99,40 @@ function getDestinationGuide(cityName) {
   return found || null;
 }
 
-// ---------- 7. Search button ----------
+// ---------- 7. Nager.Date API: upcoming public holidays ----------
+// Returns the next 3 holidays, or an empty list if there are none
+async function getHolidays(countryCode) {
+  const year = new Date().getFullYear();
+  const url = `https://date.nager.at/api/v3/PublicHolidays/${year}/${countryCode}`;
+  const response = await fetch(url);
+  if (response.status === 404) return [];
+  if (!response.ok) throw new Error("Holiday server error");
+
+  const data = await response.json();
+  const today = new Date().toISOString().slice(0, 10);   // e.g. "2026-11-05"
+
+  return data
+    .filter(h => h.date >= today)       // only holidays still to come
+    .slice(0, 3)                        // first three
+    .map(h => ({ date: h.date, name: h.name, localName: h.localName }));
+}
+
+// ---------- 8. Open-Meteo API: 5-day forecast ----------
+async function getForecast(lat, lon) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=5&timezone=auto`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Forecast server error");
+
+  const data = await response.json();
+  return data.daily.time.map((day, i) => ({
+    date: day,
+    max: data.daily.temperature_2m_max[i],
+    min: data.daily.temperature_2m_min[i],
+    rain: data.daily.precipitation_probability_max[i]
+  }));
+}
+
+// ---------- 9. Search button ----------
 searchBtn.addEventListener("click", async () => {
   const name = cityInput.value.trim();
 
@@ -100,9 +141,13 @@ searchBtn.addEventListener("click", async () => {
   timeInfo.innerHTML = "";
   weatherInfo.innerHTML = "";
   guideInfo.innerHTML = "";
+  countryInfo.innerHTML = "";
+  forecastInfo.innerHTML = "";
+  suggestionResult.innerHTML = "";
   currentCity = null;
   currentWeather = null;
   currentTime = null;
+  currentSuggestion = "";
 
   // Input validation
   if (name === "") {
@@ -123,15 +168,13 @@ searchBtn.addEventListener("click", async () => {
 
     currentCity = city;
     showMessage("");
-    cityInfo.innerHTML = `
+        cityInfo.innerHTML = `
       <h2>${city.name}, ${city.country}</h2>
       <p>Country code: ${city.country_code}</p>
-      <p>Latitude: ${city.latitude}</p>
-      <p>Longitude: ${city.longitude}</p>
       <p>Timezone: ${city.timezone}</p>
     `;
 
-    // World Time: own try/catch
+    // Local time: own try/catch
     try {
       currentTime = getLocalTime(city.timezone);
       timeInfo.innerHTML = `
@@ -177,13 +220,46 @@ searchBtn.addEventListener("click", async () => {
       guideInfo.innerHTML = "<p>Travel guide could not be loaded.</p>";
     }
 
+    // Public holidays: own try/catch
+    try {
+      const holidays = await getHolidays(city.country_code);
+      if (holidays.length === 0) {
+        countryInfo.innerHTML = "<p>No upcoming public holidays found this year.</p>";
+      } else {
+        const rows = holidays.map(h =>
+          `<li>${h.date}: ${h.name} (${h.localName})</li>`
+        ).join("");
+        countryInfo.innerHTML = `
+          <h3>Upcoming Public Holidays in ${city.country}</h3>
+          <img src="https://flagcdn.com/w80/${city.country_code.toLowerCase()}.png" alt="Flag of ${city.country}" width="80">
+          <ul>${rows}</ul>
+          <p><em>Expect bigger crowds and higher prices on these dates.</em></p>
+        `;
+      }
+    } catch (holidayError) {
+      console.error("Holiday error:", holidayError);
+      countryInfo.innerHTML = "<p>Holiday information is not available right now.</p>";
+    }
+
+    // 5-day forecast: own try/catch
+    try {
+      const forecast = await getForecast(city.latitude, city.longitude);
+      const rows = forecast.map(d =>
+        `<li>${d.date}: ${d.min}°C to ${d.max}°C, rain chance ${d.rain}%</li>`
+      ).join("");
+      forecastInfo.innerHTML = `<h3>5-Day Forecast</h3><ul>${rows}</ul>`;
+    } catch (forecastError) {
+      console.error("Forecast error:", forecastError);
+      forecastInfo.innerHTML = "<p>Forecast is not available right now.</p>";
+    }
+
   } catch (error) {
     console.error("City search error:", error);
     showMessage("Could not load data. Please check your internet connection.");
   }
 });
 
-// ---------- 8. Family cost calculator ----------
+// ---------- 10. Family cost calculator ----------
 const adultsInput = document.getElementById("adults");
 const childrenInput = document.getElementById("children");
 const infantsInput = document.getElementById("infants");
@@ -231,9 +307,16 @@ calcBtn.addEventListener("click", () => {
   const packages = window.appData.getPackages();
   const pkg = packages.find(p => p.id === Number(packageSelect.value));
 
+  if (!pkg) {
+    calcMessage.textContent = "Please choose a package.";
+    calcMessage.style.color = "red";
+    costResult.innerHTML = "";
+    return;
+  }
+
   const result = calculateFamilyCost(pkg, adults, children, infants, days);
 
-    if (result.error) {
+  if (result.error) {
     calcMessage.textContent = result.error;
     calcMessage.style.color = "red";
     costResult.innerHTML = "";
@@ -250,22 +333,21 @@ calcBtn.addEventListener("click", () => {
     infants: infants
   };
 
+  const fmt = n => n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   calcMessage.textContent = "Cost calculated.";
   calcMessage.style.color = "green";
   costResult.innerHTML = `
-    <p><strong>Total:</strong> RM ${result.total.toFixed(2)}</p>
-    <p><strong>Per person:</strong> RM ${result.perPerson.toFixed(2)}</p>
-    <p><strong>Per day:</strong> RM ${result.perDay.toFixed(2)}</p>
+    <p><strong>Total:</strong> RM ${fmt(result.total)}</p>
+    <p><strong>Per person:</strong> RM ${fmt(result.perPerson)}</p>
+    <p><strong>Per day:</strong> RM ${fmt(result.perDay)}</p>
   `;
 });
 
-// ---------- 9. Suggestion logic ----------
+// ---------- 11. Suggestion logic ----------
 const seniorsInput = document.getElementById("seniors");
 const suggestBtn = document.getElementById("suggestBtn");
 const suggestionResult = document.getElementById("suggestionResult");
-
-// Saved so the plan can store it in Local Storage later
-let currentSuggestion = "";
 
 // Decide an activity from the weather, the destination type and the family makeup
 function suggestActivity(weather, guideType, children, infants, seniors) {
@@ -331,7 +413,7 @@ suggestBtn.addEventListener("click", () => {
   suggestionResult.innerHTML = `<h3>Suggested Activity</h3><p>${currentSuggestion}</p>`;
 });
 
-// ---------- 10. Save plan (CREATE) to Local Storage ----------
+// ---------- 12. Save plan (CREATE) to Local Storage ----------
 const notesInput = document.getElementById("notes");
 const saveBtn = document.getElementById("saveBtn");
 const saveMessage = document.getElementById("saveMessage");
