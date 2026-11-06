@@ -1,6 +1,7 @@
 [
   {
-    "city": "Tokyo",
+    "city": "Tokyo", "country": "Japan", "countryCode": "JP",
+    "latitude": 35.6895, "longitude": 139.6917, "timezone": "Asia/Tokyo",
     "type": "city",
     "description": "A busy modern capital that mixes technology, food and tradition.",
     "familyTips": "Ueno Zoo, teamLab and Tokyo Disneyland suit kids. Trains are stroller-friendly.",
@@ -8,7 +9,8 @@
     "image": "images/tokyo.jpg"
   },
   {
-    "city": "Singapore",
+    "city": "Singapore", "country": "Singapore", "countryCode": "SG",
+    "latitude": 1.2897, "longitude": 103.8501, "timezone": "Asia/Singapore",
     "type": "city",
     "description": "A clean, safe city-state with many family attractions.",
     "familyTips": "Singapore Zoo, Gardens by the Bay and Sentosa are all easy with children.",
@@ -16,7 +18,8 @@
     "image": "images/singapore.jpg"
   },
   {
-    "city": "Bangkok",
+    "city": "Bangkok", "country": "Thailand", "countryCode": "TH",
+    "latitude": 13.7540, "longitude": 100.5014, "timezone": "Asia/Bangkok",
     "type": "city",
     "description": "A lively capital known for street food, temples and big shopping malls.",
     "familyTips": "Safari World, SEA LIFE aquarium and air-conditioned malls are good for kids, especially in the heat.",
@@ -24,7 +27,8 @@
     "image": "images/bangkok.jpg"
   },
   {
-    "city": "Bali",
+    "city": "Bali", "country": "Indonesia", "countryCode": "ID",
+    "latitude": -8.65, "longitude": 115.2167, "timezone": "Asia/Makassar",
     "type": "beach",
     "description": "A tropical island with beaches, rice terraces and friendly local culture.",
     "familyTips": "Choose calm beaches such as Sanur for young children. Bali Safari and Water Park is a family favourite.",
@@ -32,7 +36,8 @@
     "image": "images/bali.jpg"
   },
   {
-    "city": "Langkawi",
+    "city": "Langkawi", "country": "Malaysia", "countryCode": "MY",
+    "latitude": 6.35, "longitude": 99.8, "timezone": "Asia/Kuala_Lumpur",
     "type": "nature",
     "description": "A Malaysian island with beaches, mangroves, waterfalls and cable car views.",
     "familyTips": "Try the Kilim mangrove tour, the Sky Cab and Underwater World. Easy to reach from Malaysia.",

@@ -26,15 +26,44 @@ function showMessage(text, isError = true) {
 }
 
 // ---------- 3. Geocoding API: find the city ----------
+// Makes accents and capitals not matter: "Bāli" and "bali" both become "bali"
+function normalize(text) {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
 // Returns the city object, or null if not found
 async function searchCity(name) {
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1`;
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=10`;
   const response = await fetch(url);
   if (!response.ok) throw new Error("Geocoding server error");
 
   const data = await response.json();
-  if (!data.results) return null;          // nothing found
-  return data.results[0];
+  const results = data.results || [];
+
+  // Is this a destination we have our own guide for?
+  const guide = window.appData.getDestinations().find(
+    d => normalize(d.city) === normalize(name)
+  );
+
+  if (guide) {
+    // Prefer the API result from the guide's country (Bali in Indonesia, not India)
+    const match = results.find(r => r.country_code === guide.countryCode);
+    if (match) {
+      return { ...match, name: guide.city };       // use our spelling so the guide is found
+    }
+    // The API had no result from that country: use the coordinates stored in the guide
+    return {
+      name: guide.city,
+      country: guide.country,
+      country_code: guide.countryCode,
+      latitude: guide.latitude,
+      longitude: guide.longitude,
+      timezone: guide.timezone
+    };
+  }
+
+  if (results.length === 0) return null;           // nothing found
+  return results[0];                               // other cities: best match
 }
 
 // ---------- 4. Local time at the destination ----------
@@ -105,10 +134,14 @@ async function getHolidays(countryCode) {
   const year = new Date().getFullYear();
   const url = `https://date.nager.at/api/v3/PublicHolidays/${year}/${countryCode}`;
   const response = await fetch(url);
-  if (response.status === 404) return [];
+
+  if (response.status === 404 || response.status === 204) return [];   // no data
   if (!response.ok) throw new Error("Holiday server error");
 
-  const data = await response.json();
+  const text = await response.text();        // read as text first
+  if (text.trim() === "") return [];         // empty body = no holidays
+
+  const data = JSON.parse(text);
   const today = new Date().toISOString().slice(0, 10);   // e.g. "2026-11-05"
 
   return data

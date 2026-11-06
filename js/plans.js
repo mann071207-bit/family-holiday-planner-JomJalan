@@ -36,7 +36,7 @@ function renderPlans() {
 
   plans.forEach(plan => {
     const card = document.createElement("div");
-    card.className = "plan-card";                 // <-- new: picks up the card style
+    card.className = "plan-card";                 
     card.innerHTML = `
       <h3>${plan.city}, ${plan.country}</h3>
       <p>Package: ${plan.package} | ${plan.days} days</p>
